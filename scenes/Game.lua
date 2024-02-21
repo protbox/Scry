@@ -233,7 +233,7 @@ function Game:newBoard(nrows, ncols, rando)
         y = y - hexHeight * 0.5
     end]]
     
-    self.grid[specialRow] = { [specialCol] = { x = x, y = y, rune = 5, row = specialRow, col = specialCol } }
+    self.grid[specialRow] = { [specialCol] = { x = x, y = y, rune = 5, uncovered = true, row = specialRow, col = specialCol } }
 
     -- using a background image, so not really needed
     --lg.setBackgroundColor(pal.bg)
@@ -268,18 +268,13 @@ function Game:draw()
                 local rune = self.grid[row][col]
                 local x = rune.x
                 local y = rune.y
+                local runeX = (self.hexWidth - self.hexSize) / 2
+                local runeY = (self.hexHeight - self.hexSize) / 2 - self.hexSize
 
                 lg.push()
                 lg.translate(x, y)
 
-                -- if its rune type is 5 (matched), then fill in the hexagon
-                -- with a solid color to make it stand out more
-                -- thanks for the idea steve!
-                if rune.rune == 5 then
-                    lg.setColor(pal.matched)
-                    lg.polygon('fill', self.hexPolygon)
-                -- otherwise just draw the outline of the hexagon
-                else
+                if not rune.uncovered or not rune.uncoverAnim or rune.uncoverAnim < 1 then
                     if rune.rune == 6 then
                         lg.setColor(1, 1, 1, 1)
                         lg.setLineWidth(2)
@@ -288,14 +283,25 @@ function Game:draw()
                         lg.setLineWidth(1)
                     end
                     lg.polygon('line', self.hexPolygon)
+                    -- draw the rune sprite in the center of the hexagon
+                    lg.setColor(pal.rune)
+
+                    lg.draw(rune_sheet, runes[rune.rune], runeX, runeY)
+                end
+                if rune.uncovered then
+                    -- if its rune is uncovered, then fill in the hexagon
+                    -- with a solid color to make it stand out more
+                    -- thanks for the idea steve!
+                    lg.push()
+                    -- lg.translate(0, -self.hexHeight / 2)
+                    lg.scale(1, rune.uncoverAnim or 1)
+                    lg.setColor(pal.matched)
+                    lg.polygon('fill', self.hexPolygon)
+                    lg.setColor(pal.rune)
+                    lg.draw(rune_sheet, runes[5], runeX, runeY)
+                    lg.pop()
                 end
 
-                -- draw the rune sprite in the center of the hexagon
-                lg.setColor(pal.rune)
-                local runeX = (self.hexWidth - self.hexSize) / 2
-                local runeY = (self.hexHeight - self.hexSize) / 2 - self.hexSize
-
-                lg.draw(rune_sheet, runes[rune.rune], runeX, runeY)
 
                 lg.pop()
             end
@@ -352,7 +358,7 @@ function Game:matchAdjacentHexagons(row, col, targetRune)
         return
     end
 
-    self.grid[row][col].rune = 5
+    self.grid[row][col].uncovered = true
 
     -- position of hexagons
     local neighbors = {{-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}}
@@ -374,7 +380,7 @@ function Game:isTouchingRuneFive(row, col)
     local neighbors = self:getNeighbors(row, col)
     for _, neighbor in ipairs(neighbors) do
         local nRow, nCol = neighbor[1], neighbor[2]
-        if self.grid[nRow][nCol] and self.grid[nRow][nCol].rune == 5 then
+        if self.grid[nRow][nCol] and self.grid[nRow][nCol].uncovered then
             return true
         end
     end
@@ -447,34 +453,34 @@ function Game:mousepressed(x, y, button, istouch)
 end
 
 -- recursive matching jank below
-function Game:matchTiles(row, col, runeType)
-    if self.grid[row][col] then
+function Game:matchTiles(row, col, runeType, depth)
+    depth = depth or 0
+    local node = self.grid[row][col]
+    if node then
         if row < 1 or row > self.rows or col < 1 or col > self.cols then
             return 0
         end
 
-        if self.grid[row][col].rune ~= runeType or self.grid[row][col].rune == 5 then
+        if (node.rune ~= runeType and node.rune ~= 6) or node.uncovered then
             return 0
         end
 
         local neighbors = self:getNeighbors(row, col)
-        for _, neighbor in ipairs(neighbors) do
-            local nRow, nCol = neighbor[1], neighbor[2]
-            if self.grid[nRow][nCol] then
-                -- touched a special rune
-                if self.grid[nRow][nCol].rune == 6 then
-                    self.matchedSpecial = self.matchedSpecial + 1
-                    self.grid[nRow][nCol].rune = 5
-                end
-            end
-        end
-
-        self.grid[row][col].rune = 5
+        
+        node.uncovered = true
+        node.uncoverAnim = 0
+        flux.to(node, 0.2, { uncoverAnim = 1 }):delay(depth * 0.05)
         local count = 1
 
-        for _, neighbor in ipairs(neighbors) do
-            local nRow, nCol = neighbor[1], neighbor[2]
-            count = count + self:matchTiles(nRow, nCol, runeType)
+        if node.rune == 6 then
+            -- touched a special rune
+            self.matchedSpecial = self.matchedSpecial + 1
+            node.uncovered = true
+        else
+            for _, neighbor in ipairs(neighbors) do
+                local nRow, nCol = neighbor[1], neighbor[2]
+                count = count + self:matchTiles(nRow, nCol, runeType, depth + 1)
+            end
         end
 
         return count
