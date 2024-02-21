@@ -302,7 +302,8 @@ function love.draw()
     local hoveredHexagon = getHoveredHexagon()
     if hoveredHexagon then
         lg.push()
-        lg.translate(hoveredHexagon.x, hoveredHexagon.y)
+        lg.translate(hoveredHexagon.x + cursorShake.x * math.sin(love.timer.getTime() * 60),
+            hoveredHexagon.y + cursorShake.y * math.sin(love.timer.getTime() * 60))
 
         lg.setColor(1, 1, 1, 1)
         lg.polygon('line', hexPolygon)
@@ -373,8 +374,7 @@ function isTouchingRuneFive(row, col)
         end
     end
 
-    sfx.no:stop()
-    sfx.no:play()
+    doNo()
     return false
 end
 
@@ -392,6 +392,13 @@ function doLose()
     sfx.fail:play()
 end
 
+function doNo()
+    sfx.no:stop()
+    sfx.no:play()
+    cursorShake.x = 10
+    flux.to(cursorShake, 0.4, {x = 0})
+end
+
 -- how many special runes we uncovered in a single turn
 local matchedSpecial = 0
 
@@ -399,8 +406,7 @@ function love.mousepressed(x, y, button, istouch)
     if canMove and button == 1 then
         local clickedHexagon = getHoveredHexagon(x, y)
         if clickedHexagon and clickedHexagon.rune == 6 then
-            sfx.no:stop()
-            sfx.no:play()
+            doNo()
             return
         end
 
