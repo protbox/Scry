@@ -102,8 +102,42 @@ local level = 1
 local totalRunes = 96
 local runesReady = 0
 local gameStarted = false
+
+function generateRandomLevel(rows, cols, minRunes, maxRunes)
+    local level = {}
+    local numberOfRunes = love.math.random(minRunes, maxRunes)
+    
+    while #level < numberOfRunes do
+        local row = love.math.random(1, rows)
+        local col = love.math.random(1, cols)
+        
+        -- check if the current position is too close to other runes
+        if not isTooCloseToOtherRunes(level, row, col) then
+            table.insert(level, {row, col})
+        end
+    end
+    
+    return level
+end
+
+-- helper function for detecting runes too close to others
+function isTooCloseToOtherRunes(level, row, col)
+    for _, rune in ipairs(level) do
+        local distance = math.max(math.abs(rune[1] - row), math.abs(rune[2] - col))
+        if distance < 2 then -- ensures there's at least one tile spacing!
+            return true
+        end
+    end
+    return false
+end
+
 -- set up grid
-function newBoard()
+-- pass true as an argument to setup a random board
+function newBoard(rando)
+    rows, cols = 8, 14
+
+    local lvlMap = rando and generateRandomLevel(rows, cols, 6, 10) or difficulty[level]
+
     sfx.welcome:stop()
     sfx.welcome:play()
     gameStarted = false
@@ -111,15 +145,14 @@ function newBoard()
     runesReady = 0
     tally = {
         score = 0,
-        moves = 10 + (#difficulty[level] - 6), -- add 1 extra attempt for every rune over 6
-        left = #difficulty[level]
+        moves = 10 + (#lvlMap - 6), -- add 1 extra attempt for every rune over 6
+        left = #lvlMap
     }
     -- yeah baby, give me those sexy globals
     hexSize = 32
     hexWidth = 84--1.5 * hexSize * math.sqrt(3) .. you know what, I'll just fucking hardcode it in. come at me bro
     hexHeight = 2 * hexSize
 
-    rows, cols = 8, 12
     totalRunes = rows * cols
     rows = rows + 1
     local xOffset = (SCREEN_WIDTH - cols * hexWidth * 0.92) / 2
@@ -128,7 +161,6 @@ function newBoard()
     -- create the grid
     -- mark the special runes with type 6
     -- all others receive a random number between 1-4
-    local lvlMap = difficulty[level]
     grid = {}
     for row = 1, rows-1 do
         grid[row] = {}
@@ -465,11 +497,11 @@ end
 
 function love.keypressed(key, sc)
     -- some basic shortcuts used primarily for testing, but I'll probably leave them in
-    -- r to reload the board using the current difficulty
+    -- r will generate a random board
     -- number keys to generate a new board. the number being the difficulty level
     if canMove then
         if key == "r" then
-            newBoard()
+            newBoard(true)
 
         elseif key == "1" then
             level = 1
