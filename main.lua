@@ -36,8 +36,9 @@ local sfx = {
 -- it's reset inside newBoard()
 local tally = {}
 
--- I think this is pretty obvious
-local font = lg.newFont("res/QuinqueFive.otf", 22)
+-- load the beautiful QuinqueFive font by ggbot
+-- https://ggbot.itch.io/quinquefive-font
+local font = lg.newFont("res/QuinqueFive.otf", 20)
 
 local SCREEN_WIDTH = 384*4
 local SCREEN_HEIGHT = 216*4
@@ -57,7 +58,7 @@ local pal = {
 }
 
 -- if the player can hover over hexagons and click on them
--- should be paused during animations
+-- should be paused (false) during animations/tweening
 local canMove = false
 
 -- the arrow that does literally nothing
@@ -84,6 +85,16 @@ local difficulty = {
         [4] = { 1, 12 },
         [5] = { 8, 11 },
         [6] = { 5, 7 }
+    },
+
+    [3] = {
+        [1] = { 1, 1 },
+        [2] = { 1, 7 },
+        [3] = { 1, 11 },
+        [4] = { 4, 9 },
+        [5] = { 5, 5 },
+        [6] = { 6, 2 },
+        [7] = { 6, 12 }
     }
 }
 
@@ -93,13 +104,14 @@ local runesReady = 0
 local gameStarted = false
 -- set up grid
 function newBoard()
+    sfx.welcome:stop()
     sfx.welcome:play()
     gameStarted = false
     canMove = false
     runesReady = 0
     tally = {
         score = 0,
-        moves = 10,
+        moves = 10 + (#difficulty[level] - 6), -- add 1 extra attempt for every rune over 6
         left = #difficulty[level]
     }
     -- yeah baby, give me those sexy globals
@@ -160,6 +172,7 @@ function newBoard()
     
     grid[specialRow] = { [specialCol] = { x = x, y = y, rune = 5, row = specialRow, col = specialCol } }
 
+    -- using a background image, so not really needed
     --lg.setBackgroundColor(pal.bg)
 end
 
@@ -171,12 +184,15 @@ end
 function love.update(dt)
     flux.update(dt)
 
+    -- check to see if we've generated a new board and the runes
+    -- have all fallen in to place
     if not gameStarted and runesReady >= totalRunes then
         gameStarted = true
         canMove = true
     end
 end
 
+-- print the moves left and current score to the top of the screen
 function drawTally()
     lg.print("Attempts: " .. tally.moves, 540, 24)
     lg.print("Score: " .. tally.score, 540, 64)
@@ -198,6 +214,9 @@ function love.draw()
                 end
                 local x = grid[row][col].x
                 local y = grid[row][col].y
+                -- if its rune type is 5 (matched), then fill in the hexagon
+                -- with a solid color to make it stand out more
+                -- thanks for the idea steve!
                 if grid[row][col].rune == 5 then
                     lg.setColor(pal.matched)
                     lg.polygon('fill',
@@ -207,6 +226,7 @@ function love.draw()
                         x + hexWidth, y,
                         x + hexWidth * 0.75, y - hexHeight * 0.5,
                         x + hexWidth * 0.25, y - hexHeight * 0.5)
+                -- otherwise just draw the outline of the hexagon
                 else
                     lg.polygon('line',
                         x, y,
@@ -217,6 +237,7 @@ function love.draw()
                         x + hexWidth * 0.25, y - hexHeight * 0.5)
                 end
 
+                -- draw the rune sprite in the center of the hexagon
                 lg.setColor(pal.rune)
                 local runeX = x + (hexWidth - hexSize) / 2
                 local runeY = y + (hexHeight - hexSize) / 2 - hexSize
@@ -226,6 +247,7 @@ function love.draw()
         end
     end
 
+    -- draw an outline around the currently hovered over hexagon
     lg.setColor(1, 1, 1, 1)
     local hoveredHexagon = getHoveredHexagon()
     if hoveredHexagon then
@@ -294,6 +316,8 @@ function matchAdjacentHexagons(row, col, targetRune)
     end
 end
 
+-- this function checks to see if we're touching a matching rune (5)
+-- if not, you're unable to select the tile
 function isTouchingRuneFive(row, col)
     local neighbors = getNeighbors(row, col)
     for _, neighbor in ipairs(neighbors) do
@@ -322,6 +346,7 @@ function doLose()
     sfx.fail:play()
 end
 
+-- how many special runes we uncovered in a single turn
 local matchedSpecial = 0
 
 function love.mousepressed(x, y, button, istouch)
@@ -367,6 +392,7 @@ function love.mousepressed(x, y, button, istouch)
     end
 end
 
+-- recursive matching jank below
 function matchTiles(row, col, runeType)
     if grid[row][col] then
         if row < 1 or row > rows or col < 1 or col > cols then
@@ -438,6 +464,9 @@ function getNeighbors(row, col)
 end
 
 function love.keypressed(key, sc)
+    -- some basic shortcuts used primarily for testing, but I'll probably leave them in
+    -- r to reload the board using the current difficulty
+    -- number keys to generate a new board. the number being the difficulty level
     if canMove then
         if key == "r" then
             newBoard()
@@ -447,6 +476,9 @@ function love.keypressed(key, sc)
             newBoard()
         elseif key == "2" then
             level = 2
+            newBoard()
+        elseif key == "3" then
+            level = 3
             newBoard()
         end
     end
