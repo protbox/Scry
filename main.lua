@@ -38,7 +38,7 @@ local tally = {}
 
 -- load the beautiful QuinqueFive font by ggbot
 -- https://ggbot.itch.io/quinquefive-font
-local font = lg.newFont("res/QuinqueFive.otf", 20)
+local font = lg.newFont("res/bump-it-up.otf", 20)
 
 local SCREEN_WIDTH = 384*4
 local SCREEN_HEIGHT = 216*4
@@ -56,6 +56,10 @@ local pal = {
     rune = hex_to_color("9cc1f7"),
     matched = hex_to_color("0e325c")
 }
+
+-- 1 = titlescreen
+-- 2 = game
+local state = 1
 
 -- if the player can hover over hexagons and click on them
 -- should be paused (false) during animations/tweening
@@ -238,8 +242,8 @@ end
 
 -- print the moves left and current score to the top of the screen
 function drawTally()
-    lg.print("Attempts: " .. tally.moves, 540, 24)
-    lg.print("Score: " .. tally.score, 540, 64)
+    lg.print("Moves:    " .. tally.moves, 540, 24)
+    lg.print("Score:    " .. tally.score, 540, 64)
 end
 
 function love.draw()
