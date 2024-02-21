@@ -102,7 +102,13 @@ local level = 1
 local totalRunes = 96
 local runesReady = 0
 local gameStarted = false
+local levelSize = {
+    reg = { 8, 12, 7 },
+    large = { 8, 16, 9 }
+}
 
+-- generates and returns a random level
+-- pass it the number of rows, columns and min/max of runes to summon
 function generateRandomLevel(rows, cols, minRunes, maxRunes)
     local level = {}
     local numberOfRunes = love.math.random(minRunes, maxRunes)
@@ -132,20 +138,26 @@ function isTooCloseToOtherRunes(level, row, col)
 end
 
 -- set up grid
--- pass true as an argument to setup a random board
-function newBoard(rando)
-    rows, cols = 8, 14
+-- arguments: number of rows, number of columns, random level (bool)
+function newBoard(nrows, ncols, rando)
+    rows = nrows or 8
+    cols = ncols or 12
 
-    local lvlMap = rando and generateRandomLevel(rows, cols, 6, 10) or difficulty[level]
+    local lvlMap = rando and generateRandomLevel(rows, cols, 8, 12) or difficulty[level]
+    local lsize = rando and levelSize.large or levelSize.reg
+    if rando then
+        arrow.x = 662 -- arrow.x -32
+    end
 
     sfx.welcome:stop()
     sfx.welcome:play()
     gameStarted = false
     canMove = false
     runesReady = 0
+    local modifier = rando and 8 or 6
     tally = {
         score = 0,
-        moves = 10 + (#lvlMap - 6), -- add 1 extra attempt for every rune over 6
+        moves = 10 + (#lvlMap - modifier), -- add 1 extra attempt for every rune over 6
         left = #lvlMap
     }
     -- yeah baby, give me those sexy globals
@@ -191,7 +203,7 @@ function newBoard(rando)
     end
 
     local specialRow = rows
-    local specialCol = 7
+    local specialCol = lsize[3]
 
     local x = (specialCol - 1) * hexWidth * 0.75 + xOffset
     local y = (specialRow - 1) * hexHeight + yOffset
@@ -501,7 +513,7 @@ function love.keypressed(key, sc)
     -- number keys to generate a new board. the number being the difficulty level
     if canMove then
         if key == "r" then
-            newBoard(true)
+            newBoard(8, 16, true)
 
         elseif key == "1" then
             level = 1
