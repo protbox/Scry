@@ -68,6 +68,19 @@ local arrow = {
     src = lg.newImage("res/arrow.png")
 }
 
+local hexSize = 32
+local hexWidth = 84     --1.5 * hexSize * math.sqrt(3) .. you know what, I'll just fucking hardcode it in. come at me bro
+local hexHeight = 2 * hexSize
+
+local hexPolygon = {
+    0, 0,
+    hexWidth * 0.25, hexHeight * 0.5,
+    hexWidth * 0.75, hexHeight * 0.5,
+    hexWidth, 0,
+    hexWidth * 0.75, -hexHeight * 0.5,
+    hexWidth * 0.25, -hexHeight * 0.5
+}
+
 local difficulty = {
     [1] = {
         [1] = { 2, 2 },
@@ -106,6 +119,8 @@ local levelSize = {
     reg = { 8, 12, 7 },
     large = { 8, 16, 9 }
 }
+
+local cursorShake = {x = 0, y = 0}
 
 -- generates and returns a random level
 -- pass it the number of rows, columns and min/max of runes to summon
@@ -161,9 +176,6 @@ function newBoard(nrows, ncols, rando)
         left = #lvlMap
     }
     -- yeah baby, give me those sexy globals
-    hexSize = 32
-    hexWidth = 84--1.5 * hexSize * math.sqrt(3) .. you know what, I'll just fucking hardcode it in. come at me bro
-    hexHeight = 2 * hexSize
 
     totalRunes = rows * cols
     rows = rows + 1
@@ -249,44 +261,38 @@ function love.draw()
     for row = 1, rows do
         for col = 1, cols do
             if grid[row][col] ~= nil then
-                if grid[row][col].rune == 6 then
-                    lg.setColor(1, 1, 1, 1)
-                    lg.setLineWidth(2)
-                else
-                    lg.setColor(pal.hex)
-                    lg.setLineWidth(1)
-                end
                 local x = grid[row][col].x
                 local y = grid[row][col].y
+
+                lg.push()
+                lg.translate(x, y)
+
                 -- if its rune type is 5 (matched), then fill in the hexagon
                 -- with a solid color to make it stand out more
                 -- thanks for the idea steve!
                 if grid[row][col].rune == 5 then
                     lg.setColor(pal.matched)
-                    lg.polygon('fill',
-                        x, y,
-                        x + hexWidth * 0.25, y + hexHeight * 0.5,
-                        x + hexWidth * 0.75, y + hexHeight * 0.5,
-                        x + hexWidth, y,
-                        x + hexWidth * 0.75, y - hexHeight * 0.5,
-                        x + hexWidth * 0.25, y - hexHeight * 0.5)
+                    lg.polygon('fill', hexPolygon)
                 -- otherwise just draw the outline of the hexagon
                 else
-                    lg.polygon('line',
-                        x, y,
-                        x + hexWidth * 0.25, y + hexHeight * 0.5,
-                        x + hexWidth * 0.75, y + hexHeight * 0.5,
-                        x + hexWidth, y,
-                        x + hexWidth * 0.75, y - hexHeight * 0.5,
-                        x + hexWidth * 0.25, y - hexHeight * 0.5)
+                    if grid[row][col].rune == 6 then
+                        lg.setColor(1, 1, 1, 1)
+                        lg.setLineWidth(2)
+                    else
+                        lg.setColor(pal.hex)
+                        lg.setLineWidth(1)
+                    end
+                    lg.polygon('line', hexPolygon)
                 end
 
                 -- draw the rune sprite in the center of the hexagon
                 lg.setColor(pal.rune)
-                local runeX = x + (hexWidth - hexSize) / 2
-                local runeY = y + (hexHeight - hexSize) / 2 - hexSize
+                local runeX = (hexWidth - hexSize) / 2
+                local runeY = (hexHeight - hexSize) / 2 - hexSize
 
                 lg.draw(rune_sheet, runes[grid[row][col].rune], runeX, runeY)
+
+                lg.pop()
             end
         end
     end
@@ -295,17 +301,13 @@ function love.draw()
     lg.setColor(1, 1, 1, 1)
     local hoveredHexagon = getHoveredHexagon()
     if hoveredHexagon then
-        local x = hoveredHexagon.x
-        local y = hoveredHexagon.y
+        lg.push()
+        lg.translate(hoveredHexagon.x, hoveredHexagon.y)
 
         lg.setColor(1, 1, 1, 1)
-        lg.polygon('line',
-            x, y,
-            x + hexWidth * 0.25, y + hexHeight * 0.5,
-            x + hexWidth * 0.75, y + hexHeight * 0.5,
-            x + hexWidth, y,
-            x + hexWidth * 0.75, y - hexHeight * 0.5,
-            x + hexWidth * 0.25, y - hexHeight * 0.5)
+        lg.polygon('line', hexPolygon)
+
+        lg.pop()
     end
 
     lg.draw(arrow.src, arrow.x, arrow.y)
