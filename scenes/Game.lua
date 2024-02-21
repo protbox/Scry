@@ -166,7 +166,7 @@ function Game:newBoard(nrows, ncols, rando)
     self.rows = nrows or 8
     self.cols = ncols or 12
 
-    local lvlMap = rando and self:generateRandomLevel(rows, cols, 8, 12) or difficulty[self.level]
+    local lvlMap = rando and self:generateRandomLevel(nrows, ncols, 8, 12) or difficulty[self.level]
     local lsize = rando and self.levelSize.large or self.levelSize.reg
     if rando then
         arrow.x = 662 -- arrow.x -32
@@ -348,7 +348,7 @@ function Game:getHoveredHexagon()
 end
 
 function Game:matchAdjacentHexagons(row, col, targetRune)
-    if row < 1 or row > rows or col < 1 or col > cols or self.grid[row][col].rune ~= targetRune then
+    if row < 1 or row > self.rows or col < 1 or col > self.cols or self.grid[row][col].rune ~= targetRune then
         return
     end
 
@@ -406,7 +406,7 @@ end
 
 function Game:mousepressed(x, y, button, istouch)
     if self.canMove and button == 1 then
-        local clickedHexagon = self:getHoveredHexagon(x, y)
+        local clickedHexagon = self:getHoveredHexagon()
         if clickedHexagon and clickedHexagon.rune == 6 then
             self:doNo()
             return
