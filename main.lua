@@ -196,9 +196,9 @@ function newBoard(nrows, ncols, rando)
             local startx = love.math.random(1, 2) == 1 and -84 or SCREEN_WIDTH
             local starty = love.math.random(-84, SCREEN_HEIGHT+84)
             grid[row][col] = { realx = x, realy = y, x = startx, y = starty, rune = runeType, row = row, col = col }
-            flux.to(grid[row][col], 1.5, { x = grid[row][col].realx, y = grid[row][col].realy }):oncomplete(function()
+            flux.to(grid[row][col], 0.7, { x = grid[row][col].realx, y = grid[row][col].realy }):oncomplete(function()
                 runesReady = runesReady + 1
-            end)
+            end):delay((rows - row) * 0.12)
         end
     end
 
