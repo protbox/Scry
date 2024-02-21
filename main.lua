@@ -2,6 +2,7 @@
 -- essentially just used to limit FPS to 60
 -- anything higher is just wasted cycles on a game like this
 require "run"
+local flux = require "lib.flux"
 
 local lg = love.graphics
 lg.setDefaultFilter("nearest", "nearest")
@@ -27,7 +28,8 @@ local sfx = {
     match5 = love.audio.newSource("res/match5.wav", "static"),
     matchcube = love.audio.newSource("res/matchcube.wav", "static"),
     win = love.audio.newSource("res/win.wav", "static"),
-    fail = love.audio.newSource("res/fail.wav", "static")
+    fail = love.audio.newSource("res/fail.wav", "static"),
+    welcome = love.audio.newSource("res/welcome.wav", "static")
 }
 
 -- tally table will store the score and attempts
@@ -53,6 +55,10 @@ local pal = {
     rune = hex_to_color("9cc1f7"),
     matched = hex_to_color("0e325c")
 }
+
+-- if the player can hover over hexagons and click on them
+-- should be paused during animations
+local canMove = false
 
 -- the arrow that does literally nothing
 local arrow = {
@@ -82,9 +88,15 @@ local difficulty = {
 }
 
 local level = 1
-
+local totalRunes = 96
+local runesReady = 0
+local gameStarted = false
 -- set up grid
 function newBoard()
+    sfx.welcome:play()
+    gameStarted = false
+    canMove = false
+    runesReady = 0
     tally = {
         score = 0,
         moves = 10,
@@ -96,6 +108,7 @@ function newBoard()
     hexHeight = 2 * hexSize
 
     rows, cols = 8, 12
+    totalRunes = rows * cols
     rows = rows + 1
     local xOffset = (SCREEN_WIDTH - cols * hexWidth * 0.92) / 2
     local yOffset = (SCREEN_HEIGHT - rows * hexHeight) / 2
@@ -123,7 +136,13 @@ function newBoard()
             end
 
             runeType = runeType == 6 and 6 or love.math.random(1, 4)
-            grid[row][col] = { x = x, y = y, rune = runeType, row = row, col = col }
+            -- pick a random start zone
+            local startx = love.math.random(1, 2) == 1 and -84 or SCREEN_WIDTH
+            local starty = love.math.random(-84, SCREEN_HEIGHT+84)
+            grid[row][col] = { realx = x, realy = y, x = startx, y = starty, rune = runeType, row = row, col = col }
+            flux.to(grid[row][col], 1.5, { x = grid[row][col].realx, y = grid[row][col].realy }):oncomplete(function()
+                runesReady = runesReady + 1
+            end)
         end
     end
 
@@ -147,6 +166,15 @@ end
 function love.load()
     lg.setFont(font)
     newBoard()
+end
+
+function love.update(dt)
+    flux.update(dt)
+
+    if not gameStarted and runesReady >= totalRunes then
+        gameStarted = true
+        canMove = true
+    end
 end
 
 function drawTally()
@@ -220,27 +248,29 @@ function love.draw()
 end
 
 function getHoveredHexagon()
-    local mouseX, mouseY = love.mouse.getPosition()
-    for row = 1, rows do
-        for col = 1, cols do
-            local hexagon = grid[row][col]
-            if hexagon then
-                local x = hexagon.x
-                local y = hexagon.y
+    if canMove then
+        local mouseX, mouseY = love.mouse.getPosition()
+        for row = 1, rows do
+            for col = 1, cols do
+                local hexagon = grid[row][col]
+                if hexagon then
+                    local x = hexagon.x
+                    local y = hexagon.y
 
-                local yOffset = hexHeight / 2
+                    local yOffset = hexHeight / 2
 
-                if mouseX > x and mouseX < x + hexWidth * 0.75 and
-                   mouseY > y - yOffset and mouseY < y + hexHeight - yOffset then
-                    if col % 2 == 0 and mouseX < x + hexWidth * 0.25 then
-                        return nil
+                    if mouseX > x and mouseX < x + hexWidth * 0.75 and
+                       mouseY > y - yOffset and mouseY < y + hexHeight - yOffset then
+                        if col % 2 == 0 and mouseX < x + hexWidth * 0.25 then
+                            return nil
+                        end
+                        return hexagon
                     end
-                    return hexagon
                 end
             end
         end
+        return nil
     end
-    return nil
 end
 
 function matchAdjacentHexagons(row, col, targetRune)
@@ -295,7 +325,7 @@ end
 local matchedSpecial = 0
 
 function love.mousepressed(x, y, button, istouch)
-    if button == 1 then
+    if canMove and button == 1 then
         local clickedHexagon = getHoveredHexagon(x, y)
         if clickedHexagon and clickedHexagon.rune == 6 then
             sfx.no:stop()
@@ -408,14 +438,16 @@ function getNeighbors(row, col)
 end
 
 function love.keypressed(key, sc)
-    if key == "r" then
-        newBoard()
+    if canMove then
+        if key == "r" then
+            newBoard()
 
-    elseif key == "1" then
-        level = 1
-        newBoard()
-    elseif key == "2" then
-        level = 2
-        newBoard()
+        elseif key == "1" then
+            level = 1
+            newBoard()
+        elseif key == "2" then
+            level = 2
+            newBoard()
+        end
     end
 end
