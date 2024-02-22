@@ -69,7 +69,9 @@ local sfx = {
     win = love.audio.newSource("res/win.wav", "static"),
     fail = love.audio.newSource("res/fail.wav", "static"),
     welcome = love.audio.newSource("res/welcome.wav", "static"),
-    click = love.audio.newSource("res/navclick.wav", "static")
+    click = love.audio.newSource("res/navclick.wav", "static"),
+    back = love.audio.newSource("res/return.wav", "static"),
+    esc = love.audio.newSource("res/esc.wav", "static")
 }
 
 local font = lg.newFont("res/bump-it-up.otf", 20)
@@ -289,6 +291,7 @@ end
 function Game:drawTally()
     lg.print("Moves:    " .. self.tally.moves, 540, 24)
     lg.print("Score:    " .. self.tally.score, 540, 64)
+    lg.print("Level:    " .. self.level, 900, 24)
 end
 
 function Game:on_enter(gameType)
@@ -548,9 +551,9 @@ function Game:mousepressed(x, y, button, istouch)
             sfx.click:stop()
             sfx.click:play()
 
+            self.level = self.level + 1
             -- if we're playing adventure mode
             if self.gameType == 1 then
-                self.level = self.level + 1
                 -- if the current level is greater than the number of levels in adventure mode
                 -- then set the game type to endless
                 if self.level > #difficulty then
@@ -638,6 +641,8 @@ function Game:getNeighbors(row, col)
     return valid_neighbors
 end
 
+local escLastPressed = love.timer.getTime()
+
 function Game:keypressed(key, sc)
     -- some basic shortcuts used primarily for testing, but I'll probably leave them in
     -- r will generate a random board
@@ -655,6 +660,18 @@ function Game:keypressed(key, sc)
         elseif key == "3" then
             self.level = 3
             self:newBoard()
+
+        -- press escape twice within a second to go back to title
+        elseif key == "escape" then
+            local gt = love.timer.getTime()
+            if escLastPressed+1 > gt then
+                sfx.back:play()
+                SceneMgr:switch("Title")
+            else
+                sfx.esc:stop()
+                sfx.esc:play()
+                escLastPressed = gt
+            end
         end
     end
 end
