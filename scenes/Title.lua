@@ -99,6 +99,50 @@ function Title:draw()
     self:drawNav()
 end
 
+local box = { x = 78, y = 490, w = 360, h = 120 }
+local navcoords = {
+    [1] = { x = 78, y = 494, w = 360, h = 40 },
+    [2] = { x = 78, y = 538, w = 360, h = 34 },
+    [3] = { x = 78, y = 578, w = 360, h = 34 }
+}
+
+function Title:mousepressed(mx, my, button)
+    if button == 1 then
+        if mx >= box.x and mx <= box.x+box.w and my >= box.y and my <= box.y+box.h then
+            self:selectOption()
+        end
+    end
+end
+
+function Title:mousemoved(mx, my, dx, dy, istouch)
+    for i,v in ipairs(navcoords) do
+        if mx >= v.x and mx <= v.x+v.w and my >= v.y and my <= v.y+v.h then
+            if self.active ~= i then
+                sfx.move:stop()
+                sfx.move:play()
+            end
+
+            self.active = i
+        end
+    end
+end
+
+function Title:selectOption()
+    if self.active == 1 then
+        sfx.click:stop()
+        sfx.click:play()
+        SceneMgr:switch("Game")
+        SceneMgr.current:newBoard()
+    elseif self.active == 2 then
+        sfx.click:stop()
+        sfx.click:play()
+        SceneMgr:switch("Game")
+        SceneMgr.current:newBoard(8, 16, true)
+    elseif self.active == 3 then
+        love.event.quit()
+    end
+end
+
 function Title:keypressed(key, sc)
     if key == "down" then
         sfx.move:stop()
@@ -111,6 +155,9 @@ function Title:keypressed(key, sc)
         sfx.move:play()
         self.active = self.active - 1
         if self.active == 0 then self.active = 3 end
+
+    elseif key == "return" then
+        self:selectOption()
     end
 end
 
