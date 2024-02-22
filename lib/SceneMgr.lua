@@ -34,6 +34,10 @@ end
 function SceneMgr:mousereleased(x, y, button)
   self.current:mousereleased(x, y, button)
 end
+function SceneMgr:mousemoved(x, y, dx, dy, istouch)
+  if self.current.mousemoved then self.current:mousemoved(x, y, dx, dy, istouch) end
+end
+
 function SceneMgr:keypressed(key, sc) self.current:keypressed(key, sc) end
 
 return SceneMgr

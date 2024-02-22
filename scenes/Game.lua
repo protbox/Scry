@@ -279,7 +279,6 @@ function Game:drawTally()
 end
 
 function Game:on_enter()
-    self:newBoard()
 end
 
 function Game:update(dt)

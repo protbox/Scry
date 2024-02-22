@@ -9,7 +9,7 @@ function love.load()
         Game = require("scenes.Game")(),
         Title = require("scenes.Title")()
     })
-    SceneMgr:switch("Game")
+    SceneMgr:switch("Title")
 end
 
 function love.update(dt)
@@ -26,4 +26,8 @@ end
 
 function love.mousepressed(x, y, button, istouch, presses)
     SceneMgr:mousepressed(x, y, button, istouch, presses)
+end
+
+function love.mousemoved(x, y, dx, dy, istouch)
+    SceneMgr:mousemoved(x, y, dx, dy, istouch)
 end
