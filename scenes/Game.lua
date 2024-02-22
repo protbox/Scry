@@ -218,6 +218,7 @@ function Game:newBoard(nrows, ncols, rando)
     }
 
     self.totalRunes = self.rows * self.cols
+    self.specialRunes = {}
     self.rows = self.rows + 1
     local xOffset = (SCREEN_WIDTH - self.cols * self.hexWidth * 0.92) / 2
     local yOffset = (SCREEN_HEIGHT - self.rows * self.hexHeight) / 2
@@ -251,6 +252,10 @@ function Game:newBoard(nrows, ncols, rando)
             flux.to(self.grid[row][col], 0.7, { x = self.grid[row][col].realx, y = self.grid[row][col].realy }):oncomplete(function()
                 self.runesReady = self.runesReady + 1
             end):delay((self.rows - row) * 0.12)
+
+            if runeType == 6 then
+                table.insert(self.specialRunes, self.grid[row][col])
+            end
         end
     end
 
@@ -306,20 +311,13 @@ function Game:draw()
                 lg.push()
                 lg.translate(x, y)
 
-                if not rune.uncovered or not rune.uncoverAnim or rune.uncoverAnim < 1 then
-                    if rune.rune == 6 then
-                        lg.setColor(1, 1, 1, 1)
-                        lg.setLineWidth(2)
-                        lg.polygon('line', self.hexPolygon)
-                    else
-                        lg.setColor(pal.hex)
-                        lg.setLineWidth(1)
-                        lg.polygon('line', self.hexPolygon)
-                        -- draw the rune sprite in the center of the hexagon
-                        lg.setColor(pal.rune)
-                        lg.draw(rune_sheet, runes[rune.rune], runeX, runeY)
-                    end
-                    
+                if rune.rune ~= 6 and (not rune.uncovered or not rune.uncoverAnim or rune.uncoverAnim < 1) then
+                    lg.setColor(pal.hex)
+                    lg.setLineWidth(1)
+                    lg.polygon('line', self.hexPolygon)
+                    -- draw the rune sprite in the center of the hexagon
+                    lg.setColor(pal.rune)
+                    lg.draw(rune_sheet, runes[rune.rune], runeX, runeY)
                 end
 
                 if rune.uncovered then
@@ -337,7 +335,7 @@ function Game:draw()
                 end
 
                 if rune.rune == 6 and (not rune.uncoverAnim or rune.uncoverAnim < 1) then
-                    local t = love.timer.getTime() + rune.y * self.cols + rune.x
+                    local t = love.timer.getTime() + rune.row * self.cols + rune.col
                     local rotation = R3.rotate(R3.aa_to_quat(1, 0, 0, t))
                     rotation:apply(R3.rotate(R3.aa_to_quat(0, 1, 0, t * 1.5)))
                     local transformedPoints = {}
@@ -365,6 +363,15 @@ function Game:draw()
                 lg.pop()
             end
         end
+    end
+
+    for _, r in ipairs(self.specialRunes) do
+        lg.push()
+        lg.translate(r.x, r.y)
+        lg.setColor(1, 1, 1, 1 - (r.uncoverAnim or 0))
+        lg.setLineWidth(2)
+        lg.polygon('line', self.hexPolygon)
+        lg.pop()
     end
 
     -- draw an outline around the currently hovered over hexagon
