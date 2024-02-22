@@ -291,7 +291,12 @@ function Game:drawTally()
     lg.print("Score:    " .. self.tally.score, 540, 64)
 end
 
-function Game:on_enter()
+function Game:on_enter(gameType)
+    -- 1 = adventure mode
+    -- 2 = endless
+    self.gameType = gameType
+    -- reset level to 1
+    self.level = 1
 end
 
 function Game:update(dt)
@@ -485,6 +490,11 @@ end
 function Game:doLose()
     love.audio.stop()
     sfx.fail:play()
+    if self.gameType == 1 and self.level <= #difficulty then
+        self:newBoard()
+    else
+        self:newBoard(8, 16, true)
+    end
 end
 
 function Game:doNo()
@@ -537,7 +547,22 @@ function Game:mousepressed(x, y, button, istouch)
         if x >= 552 and x <= 552+360 and y >= 458 and y <= 458+89 then
             sfx.click:stop()
             sfx.click:play()
-            self:newBoard(8, 16, true)
+
+            -- if we're playing adventure mode
+            if self.gameType == 1 then
+                self.level = self.level + 1
+                -- if the current level is greater than the number of levels in adventure mode
+                -- then set the game type to endless
+                if self.level > #difficulty then
+                    self.gameType = 2
+                    self:newBoard(8, 16, true)
+                else
+                    self:newBoard()
+                end
+            -- otherwise we must be playing endless, so generate a random board
+            else
+                self:newBoard(8, 16, true)
+            end
         end
     end
 end

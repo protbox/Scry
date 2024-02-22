@@ -131,12 +131,12 @@ function Title:selectOption()
     if self.active == 1 then
         sfx.click:stop()
         sfx.click:play()
-        SceneMgr:switch("Game")
+        SceneMgr:switch("Game", 1)
         SceneMgr.current:newBoard()
     elseif self.active == 2 then
         sfx.click:stop()
         sfx.click:play()
-        SceneMgr:switch("Game")
+        SceneMgr:switch("Game", 2)
         SceneMgr.current:newBoard(8, 16, true)
     elseif self.active == 3 then
         love.event.quit()
