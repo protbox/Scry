@@ -22,6 +22,10 @@ local runes = {
     [6] = lg.newQuad(160, 0, 32, 32, rune_sheet:getDimensions())
 }
 
+local banner = {
+    success = lg.newImage("res/success.png")
+}
+
 -- sound effects
 local sfx = {
     ok = love.audio.newSource("res/ok.wav", "static"),
@@ -31,7 +35,8 @@ local sfx = {
     matchcube = love.audio.newSource("res/matchcube.wav", "static"),
     win = love.audio.newSource("res/win.wav", "static"),
     fail = love.audio.newSource("res/fail.wav", "static"),
-    welcome = love.audio.newSource("res/welcome.wav", "static")
+    welcome = love.audio.newSource("res/welcome.wav", "static"),
+    click = love.audio.newSource("res/navclick.wav", "static")
 }
 
 local font = lg.newFont("res/bump-it-up.otf", 20)
@@ -163,6 +168,9 @@ end
 -- set up grid
 -- arguments: number of rows, number of columns, random level (bool)
 function Game:newBoard(nrows, ncols, rando)
+    self.gameOver = false
+    self.showSuccess = false
+
     self.rows = nrows or 8
     self.cols = ncols or 12
 
@@ -309,21 +317,29 @@ function Game:draw()
 
     -- draw an outline around the currently hovered over hexagon
     lg.setColor(1, 1, 1, 1)
-    local hoveredHexagon = self:getHoveredHexagon()
-    if hoveredHexagon then
-        lg.push()
-        lg.translate(hoveredHexagon.x + cursorShake.x * math.sin(love.timer.getTime() * 60),
-            hoveredHexagon.y + cursorShake.y * math.sin(love.timer.getTime() * 60))
+    if not self.gameOver then
+        local hoveredHexagon = self:getHoveredHexagon()
+        if hoveredHexagon then
+            lg.push()
+            lg.translate(hoveredHexagon.x + cursorShake.x * math.sin(love.timer.getTime() * 60),
+                hoveredHexagon.y + cursorShake.y * math.sin(love.timer.getTime() * 60))
 
-        lg.setColor(1, 1, 1, 1)
-        lg.polygon('line', self.hexPolygon)
+            lg.setColor(1, 1, 1, 1)
+            lg.polygon('line', self.hexPolygon)
 
-        lg.pop()
+            lg.pop()
+        end
     end
 
     lg.draw(arrow.src, arrow.x, arrow.y)
 
     self:drawTally()
+
+    if self.gameOver then
+        if self.showSuccess then
+            lg.draw(banner.success, 0, 0)
+        end
+    end
 end
 
 function Game:getHoveredHexagon()
@@ -395,6 +411,8 @@ function Game:doWin()
 
     -- add 5 points for every remaining move left
     self.tally.score = self.tally.score + (self.tally.left * 5)
+    self.gameOver = true
+    self.showSuccess = true
 end
 
 function Game:doLose()
@@ -410,7 +428,7 @@ function Game:doNo()
 end
 
 function Game:mousepressed(x, y, button, istouch)
-    if self.canMove and button == 1 then
+    if self.canMove and not self.gameOver and button == 1 then
         local clickedHexagon = self:getHoveredHexagon()
         if clickedHexagon and clickedHexagon.rune == 6 then
             self:doNo()
@@ -447,6 +465,12 @@ function Game:mousepressed(x, y, button, istouch)
             elseif self.tally.left == 0 then
                 self:doWin()
             end
+        end
+    elseif self.showSuccess then
+        if x >= 552 and x <= 552+360 and y >= 458 and y <= 458+89 then
+            sfx.click:stop()
+            sfx.click:play()
+            self:newBoard(8, 16, true)
         end
     end
 end
