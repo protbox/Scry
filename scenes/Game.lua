@@ -13,6 +13,9 @@ local lg = love.graphics
 -- background image
 local bg = lg.newImage("res/bg.png")
 
+local SCREEN_WIDTH = 384*4
+local SCREEN_HEIGHT = 216*4
+
 -- rune sprite stuff
 local rune_sheet = lg.newImage("res/runes.png")
 local runes = {
@@ -25,7 +28,9 @@ local runes = {
 }
 
 local banner = {
-    success = lg.newImage("res/success.png")
+    success = lg.newImage("res/success.png"),
+    x = 0,
+    y = -SCREEN_HEIGHT
 }
 
 local cubePoints = {
@@ -75,8 +80,6 @@ local sfx = {
 }
 
 local font = lg.newFont("res/bump-it-up.otf", 20)
-local SCREEN_WIDTH = 384*4
-local SCREEN_HEIGHT = 216*4
 
 -- color stuff
 local function hex_to_color(hex)
@@ -436,7 +439,7 @@ function Game:draw()
 
     if self.gameOver then
         if self.showSuccess then
-            lg.draw(banner.success, 0, 0)
+            lg.draw(banner.success, banner.x, banner.y)
         end
     end
 end
@@ -512,6 +515,7 @@ function Game:doWin()
     self.tally.score = self.tally.score + (self.tally.left * 5)
     self.gameOver = true
     self.showSuccess = true
+    flux.to(banner, 1, { x = 0, y = 0 }, "cubicin")
 end
 
 function Game:doLose()
@@ -574,22 +578,23 @@ function Game:mousepressed(x, y, button, istouch)
         if x >= 552 and x <= 552+360 and y >= 458 and y <= 458+89 then
             sfx.click:stop()
             sfx.click:play()
-
-            self.level = self.level + 1
-            -- if we're playing adventure mode
-            if self.gameType == 1 then
-                -- if the current level is greater than the number of levels in adventure mode
-                -- then set the game type to endless
-                if self.level > #difficulty then
-                    self.gameType = 2
-                    self:newBoard(8, 16, true)
+            flux.to(banner, 0.3, { y = -SCREEN_HEIGHT }, "cubicin"):oncomplete(function()
+                self.level = self.level + 1
+                -- if we're playing adventure mode
+                if self.gameType == 1 then
+                    -- if the current level is greater than the number of levels in adventure mode
+                    -- then set the game type to endless
+                    if self.level > #difficulty then
+                        self.gameType = 2
+                        self:newBoard(8, 16, true)
+                    else
+                        self:newBoard()
+                    end
+                -- otherwise we must be playing endless, so generate a random board
                 else
-                    self:newBoard()
+                    self:newBoard(8, 16, true)
                 end
-            -- otherwise we must be playing endless, so generate a random board
-            else
-                self:newBoard(8, 16, true)
-            end
+            end)
         end
     end
 end
