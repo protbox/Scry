@@ -227,6 +227,9 @@ function Game:newBoard(nrows, ncols, rando)
         left = #lvlMap
     }
 
+    -- store the max tally for later (this value won't be adjusted)
+    self.tally.totalMoves = self.tally.moves
+
     self.totalRunes = self.rows * self.cols
     self.specialRunes = {}
     self.rows = self.rows + 1
@@ -287,11 +290,32 @@ function Game:newBoard(nrows, ncols, rando)
     --lg.setBackgroundColor(pal.bg)
 end
 
+local gems = {
+    x = 700,
+    y = 27,
+    spacing = 21,
+    srcVisible = lg.newImage("res/diamond.png"),
+    srcHidden = lg.newImage("res/diamond_hidden.png")
+}
+
+function Game:drawMoveCounter()
+    lg.print("Moves:    ", 540, 24)
+    for i = 1, self.tally.totalMoves do
+        local x = gems.x + (i-1) * gems.spacing
+        if i <= self.tally.moves then
+            lg.draw(gems.srcVisible, x, gems.y)
+        else
+            lg.draw(gems.srcHidden, x, gems.y)
+        end
+    end
+end
+
 -- print the moves left and current score to the top of the screen
 function Game:drawTally()
-    lg.print("Moves:    " .. self.tally.moves, 540, 24)
-    lg.print("Score:    " .. self.tally.score, 540, 64)
-    lg.print("Level:    " .. self.level, 900, 24)
+    --lg.print("Moves:    " .. self.tally.moves, 540, 24)
+    self:drawMoveCounter()
+    lg.print("Score:  " .. self.tally.score, 540, 64)
+    lg.print("Level:  " .. self.level, 1020, 24)
 end
 
 function Game:on_enter(gameType)
@@ -510,7 +534,7 @@ end
 function Game:mousepressed(x, y, button, istouch)
     if self.canMove and not self.gameOver and button == 1 then
         local clickedHexagon = self:getHoveredHexagon()
-        if clickedHexagon and clickedHexagon.rune == 6 then
+        if clickedHexagon and (clickedHexagon.rune == 6 or clickedHexagon.uncovered) then
             self:doNo()
             return
         end
