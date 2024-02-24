@@ -139,7 +139,7 @@ local cursorShake = {x = 0, y = 0}
 function Game:new()
     -- tally table will store the score and attempts
     -- it's reset inside Game:newBoard()
-    self.tally = {}
+    self.tally = { total = 0 }
 
     -- if the game needs to be paused, set this to false
     -- it will disallow the player to select any tiles
@@ -227,7 +227,8 @@ function Game:newBoard(nrows, ncols, rando)
     self.tally = {
         score = 0,
         moves = 10 + (#lvlMap - modifier), -- add 1 extra attempt for every rune over 6
-        left = #lvlMap
+        left = #lvlMap,
+        total = self.tally.total
     }
 
     -- store the max tally for later (this value won't be adjusted)
@@ -319,6 +320,7 @@ function Game:drawTally()
     self:drawMoveCounter()
     lg.print("Score:  " .. self.tally.score, 540, 64)
     lg.print("Level:  " .. self.level, 1020, 24)
+    lg.print("Total:  " .. self.tally.total, 540, 800)
 end
 
 function Game:on_enter(gameType)
@@ -327,6 +329,9 @@ function Game:on_enter(gameType)
     self.gameType = gameType
     -- reset level to 1
     self.level = 1
+    -- reset total score
+    -- we only want to do that when we enter the game scene
+    self.tally.total = 0
 end
 
 function Game:update(dt)
@@ -513,6 +518,7 @@ function Game:doWin()
 
     -- add 5 points for every remaining move left
     self.tally.score = self.tally.score + (self.tally.left * 5)
+    self.tally.total = self.tally.total + self.tally.score
     self.gameOver = true
     self.showSuccess = true
     flux.to(banner, 1, { x = 0, y = 0 }, "cubicin")
