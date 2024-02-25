@@ -76,7 +76,9 @@ local sfx = {
     welcome = love.audio.newSource("res/welcome.wav", "static"),
     click = love.audio.newSource("res/navclick.wav", "static"),
     back = love.audio.newSource("res/return.wav", "static"),
-    esc = love.audio.newSource("res/esc.wav", "static")
+    esc = love.audio.newSource("res/esc.wav", "static"),
+    letter = love.audio.newSource("res/letter.wav", "static"),
+    decoding = love.audio.newSource("res/decoding.wav", "static")
 }
 
 local uiFont = lg.newFont("res/bump-it-up.otf", 20)
@@ -677,7 +679,7 @@ function Game:mousepressed(x, y, button, istouch)
             end
         end
     elseif self.showSuccess then
-        if x >= 552 and x <= 552+360 and y >= 458 and y <= 458+89 then
+        if x >= 578 and x <= 578+390 and y >= 486 and y <= 486+89 then
             sfx.click:stop()
             sfx.click:play()
             flux.to(banner, 0.3, { y = -SCREEN_HEIGHT }, "cubicin"):oncomplete(function()
@@ -685,6 +687,8 @@ function Game:mousepressed(x, y, button, istouch)
                 -- if we're playing adventure mode
                 if self.gameType == 1 then
                     if difficulty[self.level - 1].lore then
+                        sfx.decoding:play()
+
                         -- show lore before generating the board
                         self.lore = difficulty[self.level - 1].lore
                         flux.to(self, 0.5, { loreAlpha = 1 }):oncomplete(function()
@@ -692,6 +696,8 @@ function Game:mousepressed(x, y, button, istouch)
                         end)
                         self.loreSubstr = 0
                         flux.to(self, #self.lore / 50, { loreSubstr = #self.lore }):delay(1.2):ease("linear")
+                            :onupdate(function() sfx.letter:play() end)
+
                         self.loreTitleFlash = 0
                         flux.to(self, 1, { loreTitleFlash = 11 }):ease("linear")
                     else
