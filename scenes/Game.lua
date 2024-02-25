@@ -91,8 +91,10 @@ end
 local pal = {
     bg = hex_to_color("0b152e"),
     hex = hex_to_color("444a86"),
-    rune = hex_to_color("9cc1f7"),
-    matched = hex_to_color("0e325c")
+    cube = hex_to_color("2fe6b5"),
+    rune = hex_to_color("72aafb"),
+    matched = hex_to_color("0e325c"),
+    zycon = hex_to_color("0c9688")
 }
 
 -- the arrow that does literally nothing
@@ -162,6 +164,13 @@ local difficulty = {
 }
 
 local cursorShake = {x = 0, y = 0}
+
+-- small function to check for chance percentages
+-- returns true or false
+local function chance(percentage)
+    local roll = love.math.random(1, 100)
+    return roll <= percentage
+end
 
 function Game:new()
     -- tally table will store the score and attempts
@@ -235,6 +244,7 @@ end
 function Game:newBoard(nrows, ncols, rando)
     self.gameOver = false
     self.showSuccess = false
+    self.zycon = false
 
     self.rows = nrows or 8
     self.cols = ncols or 12
@@ -385,12 +395,12 @@ function Game:draw()
 
                 lg.push()
                 lg.translate(x, y)
-
                 if rune.rune ~= 6 and (not rune.uncovered or not rune.uncoverAnim or rune.uncoverAnim < 1) then
                     lg.setColor(pal.hex)
                     lg.setLineWidth(1)
                     lg.polygon('line', self.hexPolygon)
                     -- draw the rune sprite in the center of the hexagon
+                    --lg.setColor(pal.rune)
                     lg.setColor(pal.rune)
                     lg.draw(rune_sheet, runes[rune.rune], runeX, runeY)
                 end
@@ -402,7 +412,7 @@ function Game:draw()
                     lg.push()
                     -- lg.translate(0, -self.hexHeight / 2)
                     lg.scale(1, rune.uncoverAnim or 1)
-                    lg.setColor(pal.matched)
+                    lg.setColor(rune.zycon and pal.zycon or pal.matched)
                     lg.polygon('fill', self.hexPolygon)
                     lg.setColor(pal.rune)
                     lg.draw(rune_sheet, runes[5], runeX, runeY)
@@ -421,7 +431,7 @@ function Game:draw()
                     end
                     lg.push()
                     lg.translate(self.hexWidth / 2, 0)
-                    lg.setColor(pal.rune[1], pal.rune[2], pal.rune[3], 1 - (rune.uncoverAnim or 0))
+                    lg.setColor(pal.cube[1], pal.cube[2], pal.cube[3], 1 - (rune.uncoverAnim or 0))
                     lg.scale(1 + (rune.uncoverAnim or 0))
                     lg.setLineWidth(2)
                     for i = 1, #cubeLines, 2 do
@@ -432,6 +442,7 @@ function Game:draw()
                             transformedPoints[b] * cubeSize, transformedPoints[b + 1] * cubeSize)
                     end
                     lg.pop()
+
                 end
 
 
@@ -605,6 +616,10 @@ function Game:mousepressed(x, y, button, istouch)
             
             elseif self.tally.left == 0 then
                 self:doWin()
+            --[[else
+                -- TODO: Finish the Zycon
+                -- if we haven't won or lost, we have a chance to spawn a Zycon
+                if not self.zycon and chance(80) then self:spawnZycon() end]]
             end
         end
     elseif self.showSuccess then
@@ -701,6 +716,34 @@ function Game:getNeighbors(row, col)
     end
 
     return valid_neighbors
+end
+
+-- The zycon is a super special rune that has a percentage chance of spawning per move
+-- if you manage to uncover it, you're awarded 50 points
+function Game:spawnZycon()
+    local zyconRevealed = false
+    -- loop until we find a place for it
+    while not zyconRevealed do
+        -- we need to locate an uncovered tile to occupy
+        -- and ensure there is a valid path to it
+        local row, col = love.math.random(1, self.rows), love.math.random(1, self.cols)
+        if self.grid[row][col] and self.grid[row][col].uncovered then
+            local neighbors = self:getNeighbors(row, col)
+
+            for _, neighbor in ipairs(neighbors) do
+                local nTile = self.grid[neighbor[1]][neighbor[2]]
+                -- make sure the neighbor tile is a standard rune so we can access the zycon from it
+                if nTile and (nTile.rune == 1 or nTile.rune == 2 or nTile.rune == 3 or nTile.rune == 4) then
+                    zyconRevealed = nTile
+                    zyconRevealed.zycon = true
+                    break
+                end
+            end
+        end
+    end
+
+    self.zycon = zyconRevealed
+    return zyconRevealed
 end
 
 local escLastPressed = love.timer.getTime()
