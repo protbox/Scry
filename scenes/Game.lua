@@ -79,7 +79,10 @@ local sfx = {
     esc = love.audio.newSource("res/esc.wav", "static")
 }
 
-local font = lg.newFont("res/bump-it-up.otf", 20)
+local uiFont = lg.newFont("res/bump-it-up.otf", 20)
+
+local loreFontS = lg.newFont("res/ABeeZee.ttf", 24)
+local loreFontL = lg.newFont("res/ABeeZee.ttf", 36)
 
 -- color stuff
 local function hex_to_color(hex)
@@ -113,7 +116,10 @@ local difficulty = {
         [3] = { 2, 7 },
         [4] = { 3, 11 },
         [5] = { 7, 11 },
-        [6] = { 5, 7 }
+        [6] = { 5, 7 },
+        lore = [[
+Rivenrock, once a bustling metropolis, now standing in ruins.
+It's said that beneath its streets lies the Undervault, a repository of lost knowledge and forbidden technology.]]
     },
 
     [2] = {
@@ -122,7 +128,10 @@ local difficulty = {
         [3] = { 1, 7 },
         [4] = { 1, 12 },
         [5] = { 8, 11 },
-        [6] = { 5, 7 }
+        [6] = { 5, 7 },
+        lore = [[
+Crystal Caverns is a labyrinth of glowing tunnels, home to the Crystal Sentinels.
+These guardians protect the Corelight Gem, a source of pure energy that sustains life in the darkest depths.]]
     },
 
     [3] = {
@@ -132,7 +141,10 @@ local difficulty = {
         [4] = { 4, 9 },
         [5] = { 5, 5 },
         [6] = { 6, 2 },
-        [7] = { 6, 12 }
+        [7] = { 6, 12 },
+        lore = [[
+The Skyward Isles, floating islands adrift in the sky, reachable only by those who master the winds.
+The Skyward Library, nestled among the clouds, contains the wisdom of the ages.]]
     },
 
      [4] = {
@@ -141,7 +153,10 @@ local difficulty = {
         [3] = { 6, 12 },
         [4] = { 2, 4 },
         [5] = { 4, 2 },
-        [6] = { 7, 1 }
+        [6] = { 7, 1 },
+        lore = [[
+The Ember Sands, a desert with sands of smoldering ember, rumored to be the remnants of a cataclysmic fire spell.
+The Phoenix Forge, buried beneath a dune, crafts weapons imbued with elemental fury.]]
     },
 
     [5] = {
@@ -151,7 +166,10 @@ local difficulty = {
         [4] = { 8, 10 },
         [5] = { 8, 3 },
         [6] = { 4, 1 },
-        [7] = { 2, 4 }
+        [7] = { 2, 4 },
+        lore = [[
+Frostbound Reach is a land forever locked in ice, home to the Virglas Obelisk.
+It's said to be a key to unlocking eternal winter to its surrounding environment.]]
     },
 
     [6] = {
@@ -160,6 +178,9 @@ local difficulty = {
         [3] = { 8, 12 },
         [4] = { 5, 2 },
         [5] = { 1, 2 },
+        lore = [[
+The Shadowed Marshes, swamps shrouded in perpetual twilight, where the Moonlit Altar stands.
+It's a place of power where the veil between worlds is thin.]]
     },
 }
 
@@ -180,9 +201,6 @@ function Game:new()
     -- if the game needs to be paused, set this to false
     -- it will disallow the player to select any tiles
     self.canMove = false
-
-    -- set the bump it up font
-    lg.setFont(font)
 
     -- some game setup variables
     self.hexSize = 32
@@ -207,6 +225,10 @@ function Game:new()
         self.hexWidth * 0.75, -self.hexHeight * 0.5,
         self.hexWidth * 0.25, -self.hexHeight * 0.5
     }
+
+    self.loreAlpha = 0
+
+    self.drawBoard = true
 end
 
 -- helper function for detecting runes too close to others
@@ -340,6 +362,7 @@ local gems = {
 }
 
 function Game:drawMoveCounter()
+    lg.setFont(uiFont)
     lg.print("Moves:    ", 540, 24)
     for i = 1, self.tally.totalMoves do
         local x = gems.x + (i-1) * gems.spacing
@@ -355,6 +378,7 @@ end
 function Game:drawTally()
     --lg.print("Moves:    " .. self.tally.moves, 540, 24)
     self:drawMoveCounter()
+    lg.setFont(uiFont)
     lg.print("Score:  " .. self.tally.score, 540, 64)
     lg.print("Level:  " .. self.level, 1020, 24)
     lg.print("Total:  " .. self.tally.total, 540, 800)
@@ -384,80 +408,81 @@ function Game:draw()
     lg.setColor(1, 1, 1, 1)
     lg.draw(bg, 0, 0)
 
-    for row = 1, self.rows do
-        for col = 1, self.cols do
-            if self.grid[row][col] ~= nil then
-                local rune = self.grid[row][col]
-                local x = rune.x
-                local y = rune.y
-                local runeX = (self.hexWidth - self.hexSize) / 2
-                local runeY = (self.hexHeight - self.hexSize) / 2 - self.hexSize
+    if self.drawBoard then
+        for row = 1, self.rows do
+            for col = 1, self.cols do
+                if self.grid[row][col] ~= nil then
+                    local rune = self.grid[row][col]
+                    local x = rune.x
+                    local y = rune.y
+                    local runeX = (self.hexWidth - self.hexSize) / 2
+                    local runeY = (self.hexHeight - self.hexSize) / 2 - self.hexSize
 
-                lg.push()
-                lg.translate(x, y)
-                if rune.rune ~= 6 and (not rune.uncovered or not rune.uncoverAnim or rune.uncoverAnim < 1) then
-                    lg.setColor(pal.hex)
-                    lg.setLineWidth(1)
-                    lg.polygon('line', self.hexPolygon)
-                    -- draw the rune sprite in the center of the hexagon
-                    --lg.setColor(pal.rune)
-                    lg.setColor(pal.rune)
-                    lg.draw(rune_sheet, runes[rune.rune], runeX, runeY)
-                end
-
-                if rune.uncovered then
-                    -- if its rune is uncovered, then fill in the hexagon
-                    -- with a solid color to make it stand out more
-                    -- thanks for the idea steve!
                     lg.push()
-                    -- lg.translate(0, -self.hexHeight / 2)
-                    lg.scale(1, rune.uncoverAnim or 1)
-                    lg.setColor(rune.zycon and pal.zycon or pal.matched)
-                    lg.polygon('fill', self.hexPolygon)
-                    lg.setColor(pal.rune)
-                    lg.draw(rune_sheet, runes[5], runeX, runeY)
+                    lg.translate(x, y)
+                    if rune.rune ~= 6 and (not rune.uncovered or not rune.uncoverAnim or rune.uncoverAnim < 1) then
+                        lg.setColor(pal.hex)
+                        lg.setLineWidth(1)
+                        lg.polygon('line', self.hexPolygon)
+                        -- draw the rune sprite in the center of the hexagon
+                        --lg.setColor(pal.rune)
+                        lg.setColor(pal.rune)
+                        lg.draw(rune_sheet, runes[rune.rune], runeX, runeY)
+                    end
+
+                    if rune.uncovered then
+                        -- if its rune is uncovered, then fill in the hexagon
+                        -- with a solid color to make it stand out more
+                        -- thanks for the idea steve!
+                        lg.push()
+                        -- lg.translate(0, -self.hexHeight / 2)
+                        lg.scale(1, rune.uncoverAnim or 1)
+                        lg.setColor(rune.zycon and pal.zycon or pal.matched)
+                        lg.polygon('fill', self.hexPolygon)
+                        lg.setColor(pal.rune)
+                        lg.draw(rune_sheet, runes[5], runeX, runeY)
+                        lg.pop()
+                    end
+
+                    if rune.rune == 6 and (not rune.uncoverAnim or rune.uncoverAnim < 1) then
+                        local t = love.timer.getTime() + rune.row * self.cols + rune.col
+                        local rotation = R3.rotate(R3.aa_to_quat(1, 0, 0, t))
+                        rotation:apply(R3.rotate(R3.aa_to_quat(0, 1, 0, t * 1.5)))
+                        local transformedPoints = {}
+                        for i, p in ipairs(cubePoints) do
+                            local tx, ty, _ = R3.project_vec3(rotation, p[1], p[2], p[3])
+                            table.insert(transformedPoints, tx)
+                            table.insert(transformedPoints, ty)
+                        end
+                        lg.push()
+                        lg.translate(self.hexWidth / 2, 0)
+                        lg.setColor(pal.cube[1], pal.cube[2], pal.cube[3], 1 - (rune.uncoverAnim or 0))
+                        lg.scale(1 + (rune.uncoverAnim or 0))
+                        lg.setLineWidth(2)
+                        for i = 1, #cubeLines, 2 do
+                            local a = cubeLines[i]
+                            local b = cubeLines[i + 1]
+                            lg.line(
+                                transformedPoints[a] * cubeSize, transformedPoints[a + 1] * cubeSize,
+                                transformedPoints[b] * cubeSize, transformedPoints[b + 1] * cubeSize)
+                        end
+                        lg.pop()
+                    end
+
+
                     lg.pop()
                 end
-
-                if rune.rune == 6 and (not rune.uncoverAnim or rune.uncoverAnim < 1) then
-                    local t = love.timer.getTime() + rune.row * self.cols + rune.col
-                    local rotation = R3.rotate(R3.aa_to_quat(1, 0, 0, t))
-                    rotation:apply(R3.rotate(R3.aa_to_quat(0, 1, 0, t * 1.5)))
-                    local transformedPoints = {}
-                    for i, p in ipairs(cubePoints) do
-                        local tx, ty, _ = R3.project_vec3(rotation, p[1], p[2], p[3])
-                        table.insert(transformedPoints, tx)
-                        table.insert(transformedPoints, ty)
-                    end
-                    lg.push()
-                    lg.translate(self.hexWidth / 2, 0)
-                    lg.setColor(pal.cube[1], pal.cube[2], pal.cube[3], 1 - (rune.uncoverAnim or 0))
-                    lg.scale(1 + (rune.uncoverAnim or 0))
-                    lg.setLineWidth(2)
-                    for i = 1, #cubeLines, 2 do
-                        local a = cubeLines[i]
-                        local b = cubeLines[i + 1]
-                        lg.line(
-                            transformedPoints[a] * cubeSize, transformedPoints[a + 1] * cubeSize,
-                            transformedPoints[b] * cubeSize, transformedPoints[b + 1] * cubeSize)
-                    end
-                    lg.pop()
-
-                end
-
-
-                lg.pop()
             end
         end
-    end
 
-    for _, r in ipairs(self.specialRunes) do
-        lg.push()
-        lg.translate(r.x, r.y)
-        lg.setColor(1, 1, 1, 1 - (r.uncoverAnim or 0))
-        lg.setLineWidth(2)
-        lg.polygon('line', self.hexPolygon)
-        lg.pop()
+        for _, r in ipairs(self.specialRunes) do
+            lg.push()
+            lg.translate(r.x, r.y)
+            lg.setColor(1, 1, 1, 1 - (r.uncoverAnim or 0))
+            lg.setLineWidth(2)
+            lg.polygon('line', self.hexPolygon)
+            lg.pop()
+        end
     end
 
     -- draw an outline around the currently hovered over hexagon
@@ -484,6 +509,17 @@ function Game:draw()
         if self.showSuccess then
             lg.draw(banner.success, banner.x, banner.y)
         end
+    end
+
+    if self.loreAlpha > 0 then
+        lg.setColor(0, 0, 0.1, self.loreAlpha)
+        lg.rectangle("fill", 0, 0, lg.getDimensions())
+        lg.setFont(loreFontS)
+        lg.setColor(1, 1, 1, self.loreAlpha * (math.floor(self.loreTitleFlash) % 2 == 0 and 0.5 or 1))
+        lg.print(("Decoding record #%d..."):format(self.level - 1), 80, 80 - (1 - self.loreAlpha) * 80)
+        lg.setFont(loreFontL)
+        lg.setColor(1, 1, 1, self.loreAlpha)
+        lg.printf(self.lore:sub(1, self.loreSubstr) .. (math.floor(love.timer.getTime() * 3) % 2 == 0 and "_" or ""), 80, 80 + loreFontS:getHeight() + 20, lg.getWidth() - 80 * 2, "left")
     end
 end
 
@@ -579,7 +615,25 @@ function Game:doNo()
     flux.to(cursorShake, 0.4, {x = 0})
 end
 
+function Game:generateNextBoard()
+    -- if the current level is greater than the number of levels in adventure mode
+    -- then set the game type to endless
+    if self.level > #difficulty then
+        self.gameType = 2
+        self:newBoard(8, 16, true)
+    else
+        self:newBoard()
+    end
+end
+
 function Game:mousepressed(x, y, button, istouch)
+    if self.loreAlpha > 0 then
+        flux.to(self, 0.5, { loreAlpha = 0 }):oncomplete(function()
+            self:generateNextBoard()
+            self.drawBoard = true
+        end)
+        return
+    end
     if self.canMove and not self.gameOver and button == 1 then
         local clickedHexagon = self:getHoveredHexagon()
         if clickedHexagon and (clickedHexagon.rune == 6 or clickedHexagon.uncovered) then
@@ -630,13 +684,18 @@ function Game:mousepressed(x, y, button, istouch)
                 self.level = self.level + 1
                 -- if we're playing adventure mode
                 if self.gameType == 1 then
-                    -- if the current level is greater than the number of levels in adventure mode
-                    -- then set the game type to endless
-                    if self.level > #difficulty then
-                        self.gameType = 2
-                        self:newBoard(8, 16, true)
+                    if difficulty[self.level - 1].lore then
+                        -- show lore before generating the board
+                        self.lore = difficulty[self.level - 1].lore
+                        flux.to(self, 0.5, { loreAlpha = 1 }):oncomplete(function()
+                            self.drawBoard = false
+                        end)
+                        self.loreSubstr = 0
+                        flux.to(self, #self.lore / 50, { loreSubstr = #self.lore }):delay(1.2):ease("linear")
+                        self.loreTitleFlash = 0
+                        flux.to(self, 1, { loreTitleFlash = 11 }):ease("linear")
                     else
-                        self:newBoard()
+                        self:generateNextBoard()
                     end
                 -- otherwise we must be playing endless, so generate a random board
                 else
