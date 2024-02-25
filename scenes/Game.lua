@@ -593,7 +593,7 @@ function Game:doWin()
     sfx.win:play()
 
     -- add 5 points for every remaining move left
-    self.tally.score = self.tally.score + (self.tally.left * 5)
+    self.tally.score = self.tally.score + (self.tally.moves * 5)
     self.tally.total = self.tally.total + self.tally.score
     self.gameOver = true
     self.showSuccess = true
@@ -696,7 +696,7 @@ function Game:mousepressed(x, y, button, istouch)
                         end)
                         self.loreSubstr = 0
                         flux.to(self, #self.lore / 50, { loreSubstr = #self.lore }):delay(1.2):ease("linear")
-                            :onupdate(function() sfx.letter:play() end)
+                            :onupdate(function() if self.showSuccess then sfx.letter:play() end end)
 
                         self.loreTitleFlash = 0
                         flux.to(self, 1, { loreTitleFlash = 11 }):ease("linear")
