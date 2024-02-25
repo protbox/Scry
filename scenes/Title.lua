@@ -10,6 +10,8 @@ local navarrow = {
     pos = 1
 }
 
+local lje = love.graphics.newImage("res/lje.png")
+
 local font = {
     title = love.graphics.newFont("res/bump-it-up.otf", 48),
     nav = love.graphics.newFont("res/bump-it-up.otf", 24)
@@ -95,6 +97,8 @@ function Title:draw()
     love.graphics.setFont(font.title)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.print("Scry", 660, 400)
+
+    love.graphics.draw(lje, 1160, 673)
 
     self:drawNav()
 end
