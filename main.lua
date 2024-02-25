@@ -10,6 +10,9 @@ function love.load()
         Title = require("scenes.Title")()
     })
     SceneMgr:switch("Title")
+
+    local cursor = love.mouse.newCursor("res/cursor.png", 0, 0)
+    love.mouse.setCursor(cursor)
 end
 
 function love.update(dt)
