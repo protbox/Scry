@@ -11,7 +11,9 @@ local R3 = require "lib.R3"
 local lg = love.graphics
 
 -- background image
-local bg = lg.newImage("res/bg.png")
+local bg = lg.newImage("res/woods_bg.png")
+local bgm = love.audio.newSource("res/bgm/woods/2.ogg", "stream")
+bgm:setVolume(0.60)
 
 local SCREEN_WIDTH = 384*4
 local SCREEN_HEIGHT = 216*4
@@ -96,8 +98,8 @@ end
 local pal = {
     bg = hex_to_color("0b152e"),
     hex = hex_to_color("444a86"),
-    cube = hex_to_color("2fe6b5"),
-    rune = hex_to_color("72aafb"),
+    cube = hex_to_color("4affd2"),
+    rune = hex_to_color("f23e9a"),
     matched = hex_to_color("0e325c"),
     zycon = hex_to_color("0c9688")
 }
@@ -108,6 +110,27 @@ local arrow = {
     y = 698,
     src = lg.newImage("res/arrow.png")
 }
+
+local elements = {
+    [1] = lg.newImage("res/hex_green.png"),
+    [2] = lg.newImage("res/hex_stone.png"),
+    [3] = lg.newImage("res/hex_water.png"),
+    [4] = lg.newImage("res/hex_wood.png"),
+    [5] = lg.newImage("res/hex_five.png"),
+    [6] = lg.newImage("res/hex_special.png")
+}
+
+local totem = {
+    src = lg.newImage("res/key.png"),
+    x = 16,
+    y = 76,
+    bobY = 0,
+    bobAmp = 10,
+    bobPeriod = 1,
+    bob_t = 0
+}
+
+local hex_uncovered = lg.newImage("res/hex_uncovered.png")
 
 -- first 3 static levels
 -- afterwards, the levels are randomly generated with larger boards
@@ -214,6 +237,7 @@ function Game:new()
     self.runesReady = 0
     self.matchedSpecial = 0
     self.gameStarted = false
+    -- { rows, cols, starting point }
     self.levelSize = {
         reg = { 8, 12, 7 },
         large = { 8, 16, 9 }
@@ -363,9 +387,16 @@ local gems = {
     srcHidden = lg.newImage("res/diamond_hidden.png")
 }
 
+local function print_s(str, x, y)
+    lg.setColor(0, 0, 0)
+    lg.print(str, x+2, y+2)
+    lg.setColor(1, 1, 1, 1)
+    lg.print(str, x, y)
+end
+
 function Game:drawMoveCounter()
     lg.setFont(uiFont)
-    lg.print("Moves:    ", 540, 24)
+    print_s("Moves:    ", 540, 24)
     for i = 1, self.tally.totalMoves do
         local x = gems.x + (i-1) * gems.spacing
         if i <= self.tally.moves then
@@ -381,9 +412,9 @@ function Game:drawTally()
     --lg.print("Moves:    " .. self.tally.moves, 540, 24)
     self:drawMoveCounter()
     lg.setFont(uiFont)
-    lg.print("Score:  " .. self.tally.score, 540, 64)
-    lg.print("Level:  " .. self.level, 1020, 24)
-    lg.print("Total:  " .. self.tally.total, 540, 800)
+    print_s("Score:  " .. self.tally.score, 540, 64)
+    print_s("Level:  " .. self.level, 1020, 24)
+    print_s("Total:  " .. self.tally.total, 540, 800)
 end
 
 function Game:on_enter(gameType)
@@ -403,7 +434,15 @@ function Game:update(dt)
     if not self.gameStarted and self.runesReady >= self.totalRunes then
         self.gameStarted = true
         self.canMove = true
+        -- music should start playing here I think
+        -- commenting out for now while testing other features
+        --bgm:play()
     end
+
+    -- make the totems bob up and down
+    totem.bob_t = totem.bob_t + dt
+    local bobbing = math.sin(totem.bob_t * math.pi / totem.bobPeriod) * totem.bobAmp
+    totem.bobY = totem.y + bobbing
 end
 
 function Game:draw()
@@ -411,6 +450,17 @@ function Game:draw()
     lg.draw(bg, 0, 0)
 
     if self.drawBoard then
+        
+        for _, r in ipairs(self.specialRunes) do
+            lg.push()
+            lg.translate(r.x, r.y)
+            lg.setColor(1, 1, 1, 1 - (r.uncoverAnim or 0))
+            lg.setLineWidth(2)
+            --lg.polygon('line', self.hexPolygon)
+            lg.draw(elements[6], 0, -self.hexHeight/2)
+            lg.pop()
+        end
+
         for row = 1, self.rows do
             for col = 1, self.cols do
                 if self.grid[row][col] ~= nil then
@@ -422,15 +472,6 @@ function Game:draw()
 
                     lg.push()
                     lg.translate(x, y)
-                    if rune.rune ~= 6 and (not rune.uncovered or not rune.uncoverAnim or rune.uncoverAnim < 1) then
-                        lg.setColor(pal.hex)
-                        lg.setLineWidth(1)
-                        lg.polygon('line', self.hexPolygon)
-                        -- draw the rune sprite in the center of the hexagon
-                        --lg.setColor(pal.rune)
-                        lg.setColor(pal.rune)
-                        lg.draw(rune_sheet, runes[rune.rune], runeX, runeY)
-                    end
 
                     if rune.uncovered then
                         -- if its rune is uncovered, then fill in the hexagon
@@ -440,50 +481,34 @@ function Game:draw()
                         -- lg.translate(0, -self.hexHeight / 2)
                         lg.scale(1, rune.uncoverAnim or 1)
                         lg.setColor(rune.zycon and pal.zycon or pal.matched)
-                        lg.polygon('fill', self.hexPolygon)
-                        lg.setColor(pal.rune)
-                        lg.draw(rune_sheet, runes[5], runeX, runeY)
+                        --lg.polygon('fill', self.hexPolygon)
+                        --lg.setColor(pal.rune)
+                        lg.setColor(1, 1, 1, 1)
+                        lg.draw(hex_uncovered, 0, -(self.hexHeight/2))
+                        --lg.draw(rune_sheet, runes[5], runeX, runeY)
                         lg.pop()
+                    end
+                    
+                    if rune.rune ~= 6 and (not rune.uncovered or not rune.uncoverAnim or rune.uncoverAnim < 1) then
+                        lg.setLineWidth(1)
+                        lg.setColor(1, 1, 1, 1)
+                        --lg.polygon('line', self.hexPolygon)
+                        -- draw the rune sprite in the center of the hexagon
+                        --lg.setColor(pal.rune)
+                        
+                        lg.draw(elements[rune.rune], 0, -(self.hexHeight/2))
+                        lg.draw(rune_sheet, runes[rune.rune], runeX, runeY)
+
                     end
 
                     if rune.rune == 6 and (not rune.uncoverAnim or rune.uncoverAnim < 1) then
-                        local t = love.timer.getTime() + rune.row * self.cols + rune.col
-                        local rotation = R3.rotate(R3.aa_to_quat(1, 0, 0, t))
-                        rotation:apply(R3.rotate(R3.aa_to_quat(0, 1, 0, t * 1.5)))
-                        local transformedPoints = {}
-                        for i, p in ipairs(cubePoints) do
-                            local tx, ty, _ = R3.project_vec3(rotation, p[1], p[2], p[3])
-                            table.insert(transformedPoints, tx)
-                            table.insert(transformedPoints, ty)
-                        end
-                        lg.push()
-                        lg.translate(self.hexWidth / 2, 0)
-                        lg.setColor(pal.cube[1], pal.cube[2], pal.cube[3], 1 - (rune.uncoverAnim or 0))
-                        lg.scale(1 + (rune.uncoverAnim or 0))
-                        lg.setLineWidth(2)
-                        for i = 1, #cubeLines, 2 do
-                            local a = cubeLines[i]
-                            local b = cubeLines[i + 1]
-                            lg.line(
-                                transformedPoints[a] * cubeSize, transformedPoints[a + 1] * cubeSize,
-                                transformedPoints[b] * cubeSize, transformedPoints[b + 1] * cubeSize)
-                        end
-                        lg.pop()
+                        lg.draw(totem.src, totem.x, -totem.bobY)
                     end
 
 
                     lg.pop()
                 end
             end
-        end
-
-        for _, r in ipairs(self.specialRunes) do
-            lg.push()
-            lg.translate(r.x, r.y)
-            lg.setColor(1, 1, 1, 1 - (r.uncoverAnim or 0))
-            lg.setLineWidth(2)
-            lg.polygon('line', self.hexPolygon)
-            lg.pop()
         end
     end
 
